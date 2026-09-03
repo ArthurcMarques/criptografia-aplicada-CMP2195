@@ -3,46 +3,56 @@
 #include<math.h>
 #include<stdlib.h>
 
-void exp_modular(int base, int expoente, int mod)
+int exp_modular(int base, int expoente, int mod)
 {      
+    int flagParada = 0;
+    int contador = 0;
     
-    int potencia2 = 16;
+    int substituiExp = expoente;
 
-    int* binario = (int*)malloc(sizeof(int)*potencia2);
+    while(flagParada != 1)
+    {
+        substituiExp = substituiExp / 2;
+        contador ++;
+        if(substituiExp == 1)
+        {
+            contador ++;
+            flagParada = 1;
+        }
+        if(substituiExp == 0)
+        {
+            flagParada = 1;
+        }
+    }
+
+    int* binario = (int*)malloc(sizeof(int)*contador);
+    
     int i = 0;
-    while(i < potencia2)
+    while(i < contador)
     {
         binario[i] = expoente % 2;
         expoente = (int)expoente / 2;
         i++;
     }
-    binario[i] = expoente / 2;
-    int posicao=0; 
 
-    for(i=0; i==0; )
-    {   
-        i = binario[posicao];
-        posicao++;
-    }
-    int posicaoFinal = potencia2 - i;
-    int vetorFinal[posicaoFinal];
-    int j = 0;
+    int d = 1;
 
-    for( ; i<= potencia2; i++)
+    for(i = contador - 1; i >= 0; i--)
     {
-        vetorFinal[j] = binario[i];
-        j++;
+        d = (d * d) % mod;
+
+        if(binario[i] == 1)
+        {
+            d = (d * base) % mod;
+        }
     }
 
-    for(i = 0; i< posicaoFinal; i++)
-    {
-        printf("%d\n", vetorFinal[i]);
-    }
+    return d;
 
 }
 
-
 int main()
 {
-    exp_modular(11,33,34);
+    int x = exp_modular(11,33,34);
+    printf("%d", x);
 }
