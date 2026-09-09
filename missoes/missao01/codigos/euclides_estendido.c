@@ -1,7 +1,9 @@
 #include <stdio.h>
 
-long long euclides_estendido(long long a, long long b, long long *x, long long *y)
+long long *euclides_estendido(long long a, long long b)
 {
+    // O vetor permanece valido apos o retorno e e sobrescrito a cada chamada.
+    static long long resultado[3];
     long long x_atual = 1;
     long long x_proximo = 0;
     long long y_atual = 0;
@@ -31,17 +33,17 @@ long long euclides_estendido(long long a, long long b, long long *x, long long *
         y_proximo = novo_y;
     }
 
-    *x = x_atual;
-    *y = y_atual;
-    return a;
+    resultado[0] = a;       // MDC
+    resultado[1] = x_atual; // Coeficiente x
+    resultado[2] = y_atual; // Coeficiente y
+
+    return resultado;
 }
 
 int main(void)
 {
     long long a;
     long long b;
-    long long x;
-    long long y;
 
     printf("Digite dois numeros inteiros: ");
 
@@ -50,11 +52,12 @@ int main(void)
         return 1;
     }
 
-    long long mdc = euclides_estendido(a, b, &x, &y);
+    long long *resultado = euclides_estendido(a, b);
 
-    printf("MDC(%lld, %lld) = %lld\n", a, b, mdc);
-    printf("x = %lld, y = %lld\n", x, y);
-    printf("(%lld) * (%lld) + (%lld) * (%lld) = %lld\n", a, x, b, y, mdc);
+    printf("MDC(%lld, %lld) = %lld\n", a, b, resultado[0]);
+    printf("x = %lld, y = %lld\n", resultado[1], resultado[2]);
+    printf("(%lld) * (%lld) + (%lld) * (%lld) = %lld\n",
+           a, resultado[1], b, resultado[2], resultado[0]);
 
     return 0;
 }
