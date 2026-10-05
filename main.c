@@ -1,7 +1,7 @@
 /* Necessario no MinGW antigo para o printf entender %lld */
 #define __USE_MINGW_ANSI_STDIO 1
 #include <stdio.h>
-#include "biblioteca.h"
+#include "Primeiro_Trabalho_Cripto.h"
 
 /* ===========================================================================
  *  main.c - bateria de testes da Missao 01
