@@ -1,43 +1,20 @@
 #ifndef CIFRAS_H
 #define CIFRAS_H
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <ctype.h>
+#include "auxiliares.h"
+#include "matematica.h"
 
-#define MAX_TEXTO 4096
-#define MAX_CHAVE 100
-
-
+/* Transposicao e fluxos. */
 /* Em Z26, A = 0, B = 1, ..., Z = 25. A transposicao muda apenas
  * as posicoes dos simbolos, preservando seus valores modulo 26. */
-static int normalizar(const char texto[], int valores[])
-{
-    int tamanho = 0;
-
-    for (int i = 0; texto[i] != '\0'; i++) {
-        unsigned char c = (unsigned char) texto[i];
-
-        if (c >= 'a' && c <= 'z') {
-            c = (unsigned char) (c - 'a' + 'A');
-        }
-        if (c >= 'A' && c <= 'Z') {
-            valores[tamanho++] = c - 'A';
-        }
-    }
-    return tamanho;
-}
-
 /* A chave informa a posicao de origem de cada simbolo da saida.
  * Exemplo: chave 3 1 2 transforma ABC em CAB. */
 /* As duas funcoes recebem vetores distintos, tamanho multiplo do bloco
  * e uma chave valida com indices de 0 a bloco - 1. */
-static void encriptar_transposicao(const int entrada[], int saida[], int tamanho,
+static void encriptar_transposicao(const int entrada[], int saida[], size_t tamanho,
                const int chave[], int bloco)
 {
-    for (int inicio = 0; inicio < tamanho; inicio += bloco) {
+    for (size_t inicio = 0; inicio < tamanho; inicio += bloco) {
         for (int i = 0; i < bloco; i++) {
             saida[inicio + i] = entrada[inicio + chave[i]];
         }
@@ -45,10 +22,10 @@ static void encriptar_transposicao(const int entrada[], int saida[], int tamanho
 }
 
 /* Desfaz a permutacao usando a mesma chave da encriptacao. */
-static void decriptar_transposicao(const int entrada[], int saida[], int tamanho,
+static void decriptar_transposicao(const int entrada[], int saida[], size_t tamanho,
                const int chave[], int bloco)
 {
-    for (int inicio = 0; inicio < tamanho; inicio += bloco) {
+    for (size_t inicio = 0; inicio < tamanho; inicio += bloco) {
         for (int i = 0; i < bloco; i++) {
             saida[inicio + chave[i]] = entrada[inicio + i];
         }
@@ -59,21 +36,21 @@ static void decriptar_transposicao(const int entrada[], int saida[], int tamanho
  * Entrada e chave devem conter valores de 0 a 25; tamanho >= 0.
  * Os vetores possuem pelo menos tamanho elementos e podem ser o mesmo
  * vetor, mas nao devem se sobrepor parcialmente. */
-static void encriptar_fluxo(const int entrada[], int saida[], int tamanho,
+static void encriptar_fluxo(const int entrada[], int saida[], size_t tamanho,
                                   int chave)
 {
     int z = chave;
-    for (int i = 0; i < tamanho; i++) {
+    for (size_t i = 0; i < tamanho; i++) {
         int original = entrada[i];
         saida[i] = (original + z) % 26;
         z = original;
     }
 }
 
-static void decriptar_fluxo(const int entrada[], int saida[], int tamanho, int chave)
+static void decriptar_fluxo(const int entrada[], int saida[], size_t tamanho, int chave)
 {
     int z = chave;
-    for (int i = 0; i < tamanho; i++) {
+    for (size_t i = 0; i < tamanho; i++) {
         saida[i] = (entrada[i] - z + 26) % 26;
         z = saida[i]; /* A proxima letra usa o texto original recuperado. */
     }
@@ -82,7 +59,7 @@ static void decriptar_fluxo(const int entrada[], int saida[], int tamanho, int c
 /* O LFSR tem quatro bits. A cada passo, sai o primeiro bit
  * e entra o XOR dos dois primeiros. Semente: de 1 a 15. */
 static void encriptar_fluxo_lfsr(const int entrada[], int saida[],
-                               int tamanho, unsigned int semente)
+                               size_t tamanho, unsigned int semente)
 {
     int bits[4];
 
@@ -92,7 +69,7 @@ static void encriptar_fluxo_lfsr(const int entrada[], int saida[],
         semente = semente / 2;
     }
 
-    for (int i = 0; i < tamanho; i++) {
+    for (size_t i = 0; i < tamanho; i++) {
         saida[i] = entrada[i] ^ bits[0]; // XOR cifra um bit.
         int novo = bits[0] ^ bits[1];
 
@@ -104,294 +81,201 @@ static void encriptar_fluxo_lfsr(const int entrada[], int saida[],
 }
 
 static void decriptar_fluxo_lfsr(const int entrada[], int saida[],
-                                      int tamanho, unsigned int semente)
+                                      size_t tamanho, unsigned int semente)
 {
     /* Em Z2, soma e subtracao sao XOR. */
     encriptar_fluxo_lfsr(entrada, saida, tamanho, semente);
 }
 
-/* Entrada e execucao das cifras pelo menu. */
-/* Retorna -1 para linha longa e 0 para fim da entrada. */
-static int ler_linha(char *linha)
+/* Cesar e Vigenere. As saidas devem ser inicializadas com {0}. */
+/* Entrada e saida podem ser a mesma estrutura; nao compartilhar ponteiros
+ * entre estruturas diferentes. As saidas devem comecar com {0}. */
+bool criptCesar(texto *Arquivo, texto *Encriptado, int chave)
 {
-    if (fgets(linha, MAX_TEXTO + 2, stdin) == NULL) {
-        return 0;
+    chave = aritmetica_modular(chave, 26);
+    Encriptado->texto = memoria_dinamica(Encriptado->texto, Arquivo->TamVet, sizeof(int));
+    for (size_t i = 0; i < Arquivo->TamVet; i++) {
+        Encriptado->texto[i] = (Arquivo->texto[i] + chave) % 26;
     }
-    linha[strcspn(linha, "\r\n")] = '\0';
-    if (strlen(linha) > MAX_TEXTO) {
-        int c;
-        while ((c = getchar()) != '\n' && c != EOF) {
-        }
-        return -1;
+    Encriptado->TamVet = Arquivo->TamVet;
+    return true;
+}
+
+bool decriptCesar(texto *Encriptado, texto *Decript, int chave)
+{
+    chave = aritmetica_modular(chave, 26);
+    Decript->texto = memoria_dinamica(Decript->texto, Encriptado->TamVet, sizeof(int));
+    for (size_t i = 0; i < Encriptado->TamVet; i++) {
+        Decript->texto[i] = (Encriptado->texto[i] - chave + 26) % 26;
+    }
+    Decript->TamVet = Encriptado->TamVet;
+    return true;
+}
+
+bool criptVigenere(texto *Arquivo, texto *Chave, texto *Encriptado)
+{
+    if (Chave->TamVet == 0 || Chave == Encriptado) return false;
+    Encriptado->texto = memoria_dinamica(Encriptado->texto, Arquivo->TamVet, sizeof(int));
+    for (size_t i = 0; i < Arquivo->TamVet; i++) {
+        Encriptado->texto[i] = (Arquivo->texto[i] + Chave->texto[i % Chave->TamVet]) % 26;
+    }
+    Encriptado->TamVet = Arquivo->TamVet;
+    return true;
+}
+
+bool decriptVigenere(texto *Encriptado, texto *Chave, texto *Decriptado)
+{
+    if (Chave->TamVet == 0 || Chave == Decriptado) return false;
+    Decriptado->texto = memoria_dinamica(Decriptado->texto, Encriptado->TamVet, sizeof(int));
+    for (size_t i = 0; i < Encriptado->TamVet; i++) {
+        Decriptado->texto[i] = (Encriptado->texto[i] - Chave->texto[i % Chave->TamVet] + 26) % 26;
+    }
+    Decriptado->TamVet = Encriptado->TamVet;
+    return true;
+}
+
+/* Afim. */
+/* Afim altera a string no proprio vetor, independentemente do tamanho.
+ * Letras sao convertidas em maiusculas; outros caracteres sao preservados. */
+int encript(char *vetor, int a, int b)
+{
+    a = (a % 26 + 26) % 26;
+    b = (b % 26 + 26) % 26;
+    if (!eh_coprimo_26(a)) return 0;
+    para_maiusculo(vetor);
+    for (size_t i = 0; vetor[i] != '\0'; i++) {
+        if (vetor[i] >= 'A' && vetor[i] <= 'Z') vetor[i] = (a * (vetor[i] - 'A') + b) % 26 + 'A';
     }
     return 1;
 }
 
-// Le um numero de uma linha e verifica se esta no intervalo permitido.
-static int numero_valido(char texto[], int minimo, int maximo, int *numero)
+int decript(char *vetor, int a, int b)
 {
-    char *fim;
-    errno = 0;
-    long valor = strtol(texto, &fim, 10);
-    if (fim == texto || errno != 0) {
-        return 0;
+    int inverso = inverso_modular(a, 26);
+    if (inverso == -1) return 0;
+    b = (b % 26 + 26) % 26;
+    para_maiusculo(vetor);
+    for (size_t i = 0; vetor[i] != '\0'; i++) {
+        if (vetor[i] >= 'A' && vetor[i] <= 'Z') {
+            int valor = inverso * (vetor[i] - 'A' - b) % 26;
+            vetor[i] = (valor + 26) % 26 + 'A';
+        }
     }
-    while (isspace((unsigned char) *fim)) {
-        fim++;
-    }
-    if (*fim != '\0' || valor < minimo || valor > maximo) {
-        return 0;
-    }
-    *numero = (int) valor;
     return 1;
 }
 
-static int executar_autochave(void)
+/* Substituicao. */
+/* Alfabeto de 26 letras: maiusculas e minusculas sao equivalentes. */
+static int validarAlfabetos(const char *valor, const char *chave)
 {
-    char linha[MAX_TEXTO + 2];
-    int entrada[MAX_TEXTO];
-    int saida[MAX_TEXTO];
-    int chave;
-    int opcao;
-    int c;
+    if (strlen(valor) != 26 || strlen(chave) != 26) return 0;
+    int usadosValor[26] = {0}, usadosChave[26] = {0};
+    for (size_t i = 0; i < 26; i++) {
+        int a = toupper((unsigned char) valor[i]);
+        int b = toupper((unsigned char) chave[i]);
+        if (a < 'A' || a > 'Z' || b < 'A' || b > 'Z') return 0;
+        if (usadosValor[a - 'A'] || usadosChave[b - 'A']) return 0;
+        usadosValor[a - 'A'] = usadosChave[b - 'A'] = 1;
+    }
+    return 1;
+}
 
-    printf("Cifra de fluxo autochave em Z26\n");
-    printf("1 - Cifrar\n2 - Decifrar\nOpcao: ");
-    if (scanf("%d", &opcao) != 1 || (opcao != 1 && opcao != 2)) {
-        printf("Opcao invalida.\n");
-        return 1;
+/* Processa qualquer tamanho de mensagem, mantendo somente letras A-Z.
+ * *saida deve iniciar em NULL ou apontar para memoria propria de malloc.
+ * Saida distinta da entrada e dos alfabetos. */
+int encriptSubstituicao(const char *entrada, const char *valor, const char *chave,
+                       size_t tamanhoEntrada, char **saida)
+{
+    if (!validarAlfabetos(valor, chave) || tamanhoEntrada != strlen(entrada)) return 0;
+    if (tamanhoEntrada == SIZE_MAX) return 0;
+    char alfabeto[27], chaveMaiuscula[27];
+    for (size_t i = 0; i < 26; i++) {
+        alfabeto[i] = toupper((unsigned char) valor[i]);
+        chaveMaiuscula[i] = toupper((unsigned char) chave[i]);
     }
-    while ((c = getchar()) != '\n' && c != EOF) {
-    }
-
-    printf("Texto (sem acentos; espacos e pontuacao serao ignorados): ");
-    if (ler_linha(linha) != 1) {
-        printf("Erro de leitura ou texto maior que %d bytes.\n", MAX_TEXTO);
-        return 1;
-    }
-    int tamanho = normalizar(linha, entrada);
-    if (tamanho == 0) {
-        printf("O texto deve conter pelo menos uma letra de A a Z.\n");
-        return 1;
-    }
-
-    while (1) {
-        printf("Chave inicial K (inteiro de 0 a 25): ");
-        int leitura = ler_linha(linha);
-        if (leitura == 0) {
-            printf("Entrada encerrada.\n");
-            return 1;
+    alfabeto[26] = chaveMaiuscula[26] = '\0';
+    char *novo = memoria_dinamica(NULL, tamanhoEntrada + 1, sizeof(char));
+    size_t tamanhoSaida = 0;
+    for (size_t i = 0; i < tamanhoEntrada; i++) {
+        int letra = toupper((unsigned char) entrada[i]);
+        if (letra >= 'A' && letra <= 'Z') {
+            const char *posicao = strchr(alfabeto, letra);
+            novo[tamanhoSaida++] = chaveMaiuscula[posicao - alfabeto];
         }
-        if (leitura == 1 && numero_valido(linha, 0, 25, &chave)) {
-            break;
-        }
-        printf("Chave invalida: informe um inteiro de 0 a 25. Tente novamente.\n");
     }
+    novo[tamanhoSaida] = '\0';
+    free(*saida);
+    *saida = novo;
+    return 1;
+}
 
-    if (opcao == 1) {
-        encriptar_fluxo(entrada, saida, tamanho, chave);
-    } else {
-        decriptar_fluxo(entrada, saida, tamanho, chave);
+int decriptSubstituicao(const char *entrada, const char *valor, const char *chave,
+                       size_t tamanhoEntrada, char **saida)
+{
+    return encriptSubstituicao(entrada, chave, valor, tamanhoEntrada, saida);
+}
+
+/* Hill: resultados alocados pelas funcoes e liberados pelo chamador. */
+/* Retorna texto novo, somente A-Z, com preenchimento X.
+ * Quem chama deve liberar o resultado. NULL indica ordem invalida. */
+char *prepararTexto(const char *entrada, int ordem)
+{
+    if (ordem <= 0) return NULL;
+    size_t tamanho = strlen(entrada);
+    if (tamanho > SIZE_MAX - (size_t) ordem) return NULL;
+    char *saida = memoria_dinamica(NULL, tamanho + (size_t) ordem, sizeof(char));
+    size_t posicao = 0;
+    for (size_t i = 0; entrada[i] != '\0'; i++) {
+        int c = toupper((unsigned char) entrada[i]);
+        if (c >= 'A' && c <= 'Z') saida[posicao++] = (char) c;
     }
-    printf("Texto %s: ", opcao == 1 ? "cifrado" : "decifrado");
-    for (int i = 0; i < tamanho; i++) {
-        putchar('A' + saida[i]);
+    while (posicao % (size_t) ordem != 0) saida[posicao++] = 'X';
+    saida[posicao] = '\0';
+    return saida;
+}
+
+/* *resultado deve comecar em NULL ou apontar para memoria propria.
+ * O resultado anterior e liberado somente em caso de sucesso. */
+int cifraHill(const char *texto, int **chave, int ordem, char **resultado)
+{
+    char *preparado = prepararTexto(texto, ordem);
+    if (preparado == NULL) return 0;
+    size_t tamanho = strlen(preparado);
+    char *saida = memoria_dinamica(NULL, tamanho + 1, sizeof(char));
+    int *vetor = memoria_dinamica(NULL, (size_t) ordem, sizeof(int));
+    int *produto = memoria_dinamica(NULL, (size_t) ordem, sizeof(int));
+    for (size_t inicio = 0; inicio < tamanho; inicio += ordem) {
+        for (int i = 0; i < ordem; i++) vetor[i] = preparado[inicio+i] - 'A';
+        multiplicarVetorMatriz(vetor, chave, produto, ordem, 26);
+        for (int i = 0; i < ordem; i++) saida[inicio+i] = produto[i] + 'A';
     }
-    putchar('\n');
-    return 0;
+    saida[tamanho] = '\0';
+    free(preparado);
+    free(vetor);
+    free(produto);
+    free(*resultado);
+    *resultado = saida;
+    return 1;
+}
+
+int decifraHill(const char *texto, int **chave, int ordem, char **resultado)
+{
+    size_t tamanho = strlen(texto);
+    if (ordem <= 0 || tamanho % (size_t) ordem != 0) return 0;
+    for (size_t i = 0; i < tamanho; i++) {
+        int c = toupper((unsigned char) texto[i]);
+        if (c < 'A' || c > 'Z') return 0;
+    }
+    int **inversa = criarMatriz(ordem);
+    if (!calcularInversaHill(chave, inversa, ordem, 26)) {
+        liberarMatriz(inversa, ordem);
+        return 0;
+    }
+    int ok = cifraHill(texto, inversa, ordem, resultado);
+    liberarMatriz(inversa, ordem);
+    return ok;
 }
 
 
-static int executar_lfsr(void)
-{
-    char linha[MAX_TEXTO + 2];
-    int entrada[MAX_TEXTO * 4];
-    int saida[MAX_TEXTO * 4];
-    int tamanho;
-    int opcao;
-    unsigned int semente;
-    const char *hex = "0123456789ABCDEF";
-
-    printf("1 - Cifrar\n2 - Decifrar\nOpcao: ");
-    if (ler_linha(linha) != 1 ||
-        (strcmp(linha, "1") != 0 && strcmp(linha, "2") != 0)) {
-        printf("Opcao invalida.\n");
-        return 1;
-    }
-    opcao = linha[0] - '0';
-
-    while (1) {
-        printf("Palavra hexadecimal (exemplo: DF0E01; sem prefixo 0x): ");
-        int leitura = ler_linha(linha);
-        if (leitura == 0) {
-            printf("Entrada encerrada.\n");
-            return 1;
-        }
-        int valida = leitura == 1 && linha[0] != '\0';
-        tamanho = 0;
-        for (int i = 0; valida && linha[i] != '\0'; i++) {
-            char letra = toupper((unsigned char) linha[i]);
-            int valor;
-            if (letra >= '0' && letra <= '9') {
-                valor = letra - '0';
-            } else if (letra >= 'A' && letra <= 'F') {
-                valor = letra - 'A' + 10;
-            } else {
-                valida = 0;
-                break;
-            }
-            // Cada digito hexadecimal corresponde a quatro bits.
-            for (int bit = 3; bit >= 0; bit--) {
-                entrada[tamanho + bit] = valor % 2;
-                valor = valor / 2;
-            }
-            tamanho = tamanho + 4;
-        }
-        if (valida) {
-            break;
-        }
-        printf("Palavra invalida: use de 1 a %d digitos hexadecimais.\n", MAX_TEXTO);
-    }
-
-    while (1) {
-        printf("Semente (4 bits, diferente de 0000; exemplo: 0111): ");
-        int leitura = ler_linha(linha);
-        if (leitura == 0) {
-            printf("Entrada encerrada.\n");
-            return 1;
-        }
-        int valida = leitura == 1 && strlen(linha) == 4;
-        semente = 0;
-        for (int i = 0; valida && i < 4; i++) {
-            if (linha[i] != '0' && linha[i] != '1') {
-                valida = 0;
-            } else {
-                semente = semente * 2 + (linha[i] - '0');
-            }
-        }
-        if (valida && semente != 0) {
-            break;
-        }
-        printf("Semente invalida. Tente novamente.\n");
-    }
-
-    if (opcao == 1) {
-        encriptar_fluxo_lfsr(entrada, saida, tamanho, semente);
-    } else {
-        decriptar_fluxo_lfsr(entrada, saida, tamanho, semente);
-    }
-    printf("Fluxo de chave (bits): ");
-    for (int i = 0; i < tamanho; i++) {
-        putchar('0' + (entrada[i] ^ saida[i]));
-    }
-    printf("\nTexto %s (hex): ", opcao == 1 ? "cifrado" : "decifrado");
-    for (int i = 0; i < tamanho; i += 4) {
-        int valor = saida[i] * 8 + saida[i+1] * 4 +
-                    saida[i+2] * 2 + saida[i+3];
-        putchar(hex[valor]);
-    }
-    putchar('\n');
-    return 0;
-}
-
-static int executar_transposicao(void)
-{
-    char texto[MAX_TEXTO + 2];
-    int entrada[MAX_TEXTO + MAX_CHAVE];
-    int saida[MAX_TEXTO + MAX_CHAVE];
-    int chave[MAX_CHAVE];
-    int opcao;
-    int bloco;
-    int c;
-
-    printf("Cifra de transposicao em Z26\n");
-    printf("1 - Cifrar\n2 - Decifrar\nOpcao: ");
-    if (scanf("%d", &opcao) != 1 || (opcao != 1 && opcao != 2)) {
-        printf("Opcao invalida.\n");
-        return 1;
-    }
-
-    printf("Tamanho do bloco (1 a %d): ", MAX_CHAVE);
-    if (scanf("%d", &bloco) != 1 || bloco < 1 || bloco > MAX_CHAVE) {
-        printf("Tamanho de bloco invalido.\n");
-        return 1;
-    }
-
-    while (1) {
-        int usados[MAX_CHAVE] = {0};
-        int chave_valida = 1;
-
-        printf("Digite uma permutacao de 1 a %d (exemplo para 3: 3 1 2): ", bloco);
-        for (int i = 0; i < bloco; i++) {
-            int posicao;
-            if (scanf("%d", &posicao) != 1 || posicao < 1 || posicao > bloco) {
-                printf("Chave invalida: use apenas posicoes de 1 a %d.\n", bloco);
-                chave_valida = 0;
-                break;
-            }
-            if (usados[posicao - 1]) {
-                printf("Chave invalida: as posicoes nao podem se repetir.\n");
-                chave_valida = 0;
-                break;
-            }
-            chave[i] = posicao - 1;
-            usados[posicao - 1] = 1;
-        }
-
-        while ((c = getchar()) != '\n' && c != EOF) {
-            /* Descarta o restante da tentativa antes de ler outra entrada. */
-        }
-        if (c == EOF) {
-            printf("Entrada encerrada.\n");
-            return 1;
-        }
-        if (chave_valida) {
-            break;
-        }
-        printf("Digite a chave completa novamente.\n");
-    }
-    printf("Texto (sem acentos; espacos e pontuacao serao ignorados): ");
-    if (fgets(texto, sizeof(texto), stdin) == NULL) {
-        printf("Erro ao ler o texto.\n");
-        return 1;
-    }
-    texto[strcspn(texto, "\r\n")] = '\0';
-    if (strlen(texto) > MAX_TEXTO) {
-        printf("Texto muito longo: limite de %d caracteres.\n", MAX_TEXTO);
-        return 1;
-    }
-
-    int tamanho = normalizar(texto, entrada);
-    if (tamanho == 0) {
-        printf("O texto deve conter pelo menos uma letra de A a Z.\n");
-        return 1;
-    }
-
-    if (opcao == 1) {
-        int preenchimento = (bloco - tamanho % bloco) % bloco;
-        for (int i = 0; i < preenchimento; i++) {
-            entrada[tamanho++] = 'X' - 'A';
-        }
-        printf("Preenchimento: %d letra(s) X.\n", preenchimento);
-    } else if (tamanho % bloco != 0) {
-        printf("O tamanho do texto cifrado deve ser multiplo do bloco.\n");
-        return 1;
-    }
-
-    if (opcao == 1) {
-        encriptar_transposicao(entrada, saida, tamanho, chave, bloco);
-    } else {
-        decriptar_transposicao(entrada, saida, tamanho, chave, bloco);
-    }
-    printf("Texto %s: ", opcao == 1 ? "cifrado" : "decifrado");
-    for (int i = 0; i < tamanho; i++) {
-        putchar('A' + saida[i]);
-    }
-    putchar('\n');
-    if (opcao == 2) {
-        printf("O preenchimento X e mantido para preservar letras do texto original.\n");
-    }
-    return 0;
-}
 
 #endif

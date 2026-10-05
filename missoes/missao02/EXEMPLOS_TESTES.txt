@@ -1,0 +1,334 @@
+EXEMPLOS DE TESTE DAS CIFRAS
+
+Uso: execute o programa compilado a partir de codigos/main.c.
+Cada bloco ENTRADA pode ser copiado para o terminal.
+A primeira linha escolhe a cifra e a segunda escolhe a operacao:
+1 = cifrar; 2 = decifrar. Digite as demais linhas na ordem indicada.
+Antes da mensagem, escolha 1 para teclado ou 2 para arquivo.
+Os blocos abaixo ja incluem a escolha 1 (teclado).
+Para usar um arquivo, troque esse 1 por 2 e a mensagem pelo caminho do .txt.
+Depois de cada operacao, o programa volta ao menu. Digite 0 para sair.
+Copie apenas as linhas de entrada, sem titulos ou resultados.
+Este arquivo e um roteiro de testes, nao uma entrada para redirecionar inteira.
+
+=================================================================
+1 - Fluxo binario LFSR
+=================================================================
+Semente 0111. Palavra em hexadecimal. Fluxo esperado: 789AF1.
+
+CIFRAR - ENTRADA:
+1
+1
+1
+DF0E01
+0111
+
+SAIDA ESPERADA (trecho):
+Texto cifrado (hex): A794F0
+
+DECIFRAR - ENTRADA:
+1
+2
+1
+A794F0
+0111
+
+SAIDA ESPERADA (trecho):
+Texto decifrado (hex): DF0E01
+
+=================================================================
+2 - Fluxo autochave
+=================================================================
+Chave inicial K=8.
+
+CIFRAR - ENTRADA:
+2
+1
+1
+MODULO
+8
+
+SAIDA ESPERADA (trecho):
+Texto cifrado: UARXFZ
+
+DECIFRAR - ENTRADA:
+2
+2
+1
+UARXFZ
+8
+
+SAIDA ESPERADA (trecho):
+Texto decifrado: MODULO
+
+=================================================================
+3 - Transposicao
+=================================================================
+Bloco de 3 letras e permutacao 3 1 2, digitada em uma linha.
+
+CIFRAR - ENTRADA:
+3
+1
+3
+3 1 2
+1
+ABCDEF
+
+SAIDA ESPERADA (trecho):
+Texto cifrado: CABFDE
+
+DECIFRAR - ENTRADA:
+3
+2
+3
+3 1 2
+1
+CABFDE
+
+SAIDA ESPERADA (trecho):
+Texto decifrado: ABCDEF
+
+=================================================================
+4 - Cesar
+=================================================================
+Deslocamento de 3 letras.
+
+CIFRAR - ENTRADA:
+4
+1
+1
+ABCXYZ
+3
+
+SAIDA ESPERADA (trecho):
+Resultado: DEFABC
+
+DECIFRAR - ENTRADA:
+4
+2
+1
+DEFABC
+3
+
+SAIDA ESPERADA (trecho):
+Resultado: ABCXYZ
+
+=================================================================
+5 - Vigenere
+=================================================================
+Palavra-chave LEMON, repetida ao longo da mensagem.
+
+CIFRAR - ENTRADA:
+5
+1
+1
+ATTACKATDAWN
+LEMON
+
+SAIDA ESPERADA (trecho):
+Resultado: LXFOPVEFRNHR
+
+DECIFRAR - ENTRADA:
+5
+2
+1
+LXFOPVEFRNHR
+LEMON
+
+SAIDA ESPERADA (trecho):
+Resultado: ATTACKATDAWN
+
+=================================================================
+6 - Afim
+=================================================================
+Chaves A=5 e B=8. A e coprimo com 26.
+
+CIFRAR - ENTRADA:
+6
+1
+5
+8
+1
+AFFINECIPHER
+
+SAIDA ESPERADA (trecho):
+Resultado: IHHWVCSWFRCP
+
+DECIFRAR - ENTRADA:
+6
+2
+5
+8
+1
+IHHWVCSWFRCP
+
+SAIDA ESPERADA (trecho):
+Resultado: AFFINECIPHER
+
+=================================================================
+7 - Substituicao
+=================================================================
+A chave abaixo corresponde a A-Z. Digite suas 26 letras em uma linha.
+Ignora espacos, numeros, pontuacao e letras acentuadas; converte minusculas para maiusculas.
+
+CIFRAR - ENTRADA:
+7
+1
+BCDEFGHIJKLMNOPQRSTUVWXYZA
+1
+AbZz! 123
+
+SAIDA ESPERADA (trecho):
+Resultado: BCAA
+
+DECIFRAR - ENTRADA:
+7
+2
+BCDEFGHIJKLMNOPQRSTUVWXYZA
+1
+BcAa! 123
+
+SAIDA ESPERADA (trecho):
+Resultado: ABZZ
+
+=================================================================
+8 - Hill
+=================================================================
+Matriz de ordem 2: [3 3; 2 5].
+Digite cada elemento em uma linha, percorrendo a matriz por linhas.
+O programa usa vetor-linha vezes matriz.
+
+CIFRAR - ENTRADA:
+8
+1
+2
+3
+3
+2
+5
+1
+HELP
+
+SAIDA ESPERADA (trecho):
+Resultado: DPLE
+
+DECIFRAR - ENTRADA:
+8
+2
+2
+3
+3
+2
+5
+1
+DPLE
+
+SAIDA ESPERADA (trecho):
+Resultado: HELP
+
+=================================================================
+TESTES ADICIONAIS
+=================================================================
+Transposicao com preenchimento X
+
+ENTRADA:
+3
+1
+3
+3 1 2
+1
+ABCD
+
+SAIDA ESPERADA (trecho):
+Texto cifrado: CABXDX
+
+Decifrar mantendo o preenchimento
+
+ENTRADA:
+3
+2
+3
+3 1 2
+1
+CABXDX
+
+SAIDA ESPERADA (trecho):
+Texto decifrado: ABCDXX
+
+Hill com preenchimento X
+
+ENTRADA:
+8
+1
+2
+3
+3
+2
+5
+1
+A
+
+SAIDA ESPERADA (trecho):
+Resultado: UL
+
+Hill decifrado conserva o X
+
+ENTRADA:
+8
+2
+2
+3
+3
+2
+5
+1
+UL
+
+SAIDA ESPERADA (trecho):
+Resultado: AX
+
+Transposicao: rejeitar chave repetida e tentar novamente
+
+ENTRADA:
+3
+1
+3
+1 1 2
+3 1 2
+1
+ABCDEF
+
+SAIDA ESPERADA (trecho):
+Texto cifrado: CABFDE
+
+LFSR: rejeitar semente 0000 e tentar novamente
+
+ENTRADA:
+1
+1
+1
+DF0E01
+0000
+0111
+
+SAIDA ESPERADA (trecho):
+Texto cifrado (hex): A794F0
+
+Afim: rejeitar A=2 e tentar A=5
+
+ENTRADA:
+6
+1
+2
+5
+8
+1
+AFFINECIPHER
+
+SAIDA ESPERADA (trecho):
+Resultado: IHHWVCSWFRCP
+
+Nos testes de chave invalida, o programa deve mostrar o erro,
+pedir novamente a chave e depois produzir o resultado indicado.
+
+Todos os 23 casos deste roteiro foram executados e conferidos.
