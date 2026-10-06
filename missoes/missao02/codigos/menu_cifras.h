@@ -9,6 +9,8 @@ static int executar_autochave(void)
 {
     int opcao = escolher_operacao();
     if (opcao == -1) return 1;
+    int origem_chave = escolher_origem_chave(opcao);
+    if (origem_chave <= 0) return 1;
     printf("Texto sem acentos.\n");
     char *linha = ler_mensagem();
     if (linha == NULL) return 1;
@@ -20,7 +22,13 @@ static int executar_autochave(void)
         printf("O texto deve conter letras.\n");
         return 1;
     }
-    int chave = pedir_numero("Chave inicial (0 a 25): ", 0, 25);
+    int chave;
+    if (origem_chave == 2) {
+        chave = sortear_numero(26);
+        printf("Chave gerada: %d\n", chave);
+    } else {
+        chave = pedir_numero("Chave inicial (0 a 25): ", 0, 25);
+    }
     if (chave == -1) { free(entrada); return 1; }
     int *saida = memoria_dinamica(NULL, tamanho, sizeof(int));
     if (opcao == 1) encriptar_fluxo(entrada, saida, tamanho, chave);
@@ -57,6 +65,8 @@ static int executar_lfsr(void)
     const char *hex = "0123456789ABCDEF";
     int opcao = escolher_operacao();
     if (opcao == -1) return 1;
+    int origem_chave = escolher_origem_chave(opcao);
+    if (origem_chave <= 0) return 1;
     char *linha;
     while (1) {
         printf("Palavra hexadecimal (sem 0x): ");
@@ -84,7 +94,12 @@ static int executar_lfsr(void)
     }
     free(linha);
     unsigned int semente;
-    if (!ler_semente(&semente)) {
+    if (origem_chave == 2) {
+        semente = (unsigned int) sortear_numero(15) + 1;
+        printf("Semente gerada: ");
+        for (int bit = 3; bit >= 0; bit--) putchar('0' + ((semente >> bit) & 1));
+        putchar('\n');
+    } else if (!ler_semente(&semente)) {
         free(entrada);
         return 1;
     }
@@ -93,6 +108,8 @@ static int executar_lfsr(void)
     else decriptar_fluxo_lfsr(entrada, saida, tamanho, semente);
     printf("Fluxo de chave (bits): ");
     for (size_t i = 0; i < tamanho; i++) putchar('0' + (entrada[i] ^ saida[i]));
+    printf("\nTexto %s (binario): ", opcao == 1 ? "cifrado" : "decifrado");
+    for (size_t i = 0; i < tamanho; i++) putchar('0' + saida[i]);
     printf("\nTexto %s (hex): ", opcao == 1 ? "cifrado" : "decifrado");
     for (size_t i = 0; i < tamanho; i += 4) {
         int valor = saida[i]*8 + saida[i+1]*4 + saida[i+2]*2 + saida[i+3];
@@ -138,10 +155,17 @@ static int executar_transposicao(void)
 {
     int opcao = escolher_operacao();
     if (opcao == -1) return 1;
+    int origem_chave = escolher_origem_chave(opcao);
+    if (origem_chave <= 0) return 1;
     int bloco = pedir_numero("Tamanho do bloco (1 a 100): ", 1, MAX_CHAVE);
     if (bloco == -1) return 1;
     int chave[MAX_CHAVE];
-    if (!ler_permutacao(chave, bloco)) return 1;
+    if (origem_chave == 2) {
+        gerar_permutacao(chave, bloco);
+        printf("Chave gerada (bloco %d):", bloco);
+        for (int i = 0; i < bloco; i++) printf(" %d", chave[i] + 1);
+        putchar('\n');
+    } else if (!ler_permutacao(chave, bloco)) return 1;
     printf("Texto sem acentos.\n");
     char *linha = ler_mensagem();
     if (linha == NULL) return 1;
@@ -195,14 +219,9 @@ char *substituicaoTamanhoIndeterminado(char *entrada)
     const char valor[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     char chave[27];
     char *cifrado = NULL, *decifrado = NULL;
-    strcpy(chave, valor);
-    // Embaralhar garante uma chave sem letras repetidas.
-    static int inicializado = 0;
-    if (!inicializado) { srand((unsigned int) time(NULL)); inicializado = 1; }
-    for (int i = 25; i > 0; i--) {
-        int j = rand() % (i + 1);
-        char temp = chave[i]; chave[i] = chave[j]; chave[j] = temp;
-    }
+    char *gerada = gerar_chave_substituicao();
+    strcpy(chave, gerada);
+    free(gerada);
     size_t tamanho = strlen(entrada);
     encriptSubstituicao(entrada, valor, chave, tamanho, &cifrado);
     decriptSubstituicao(cifrado, valor, chave, strlen(cifrado), &decifrado);
@@ -216,6 +235,8 @@ static void executar_cesar_vigenere(int vigenere)
 {
     int opcao = escolher_operacao();
     if (opcao == -1) return;
+    int origem_chave = escolher_origem_chave(opcao);
+    if (origem_chave <= 0) return;
     texto entrada = {0}, chave = {0}, saida = {0};
     printf("Texto sem acentos: ");
     if (!ler_mensagem_letras(&entrada)) return;
@@ -226,7 +247,15 @@ static void executar_cesar_vigenere(int vigenere)
     }
     int ok;
     if (vigenere) {
-        do {
+        if (origem_chave == 2) {
+            int tamanho = pedir_numero("Quantidade de letras da chave: ", 1, INT_MAX);
+            if (tamanho == -1) { liberarTexto(&entrada); return; }
+            chave.texto = memoria_dinamica(NULL, (size_t) tamanho, sizeof(int));
+            chave.TamVet = (size_t) tamanho;
+            for (size_t i = 0; i < chave.TamVet; i++) chave.texto[i] = sortear_numero(26);
+            printf("Chave gerada: ");
+            imprimir_letras(chave.texto, chave.TamVet);
+        } else do {
             printf("Palavra-chave: ");
             if (!lerTexto(&chave)) {
                 liberarTexto(&entrada);
@@ -239,7 +268,11 @@ static void executar_cesar_vigenere(int vigenere)
         else ok = decriptVigenere(&entrada, &chave, &saida);
     } else {
         int deslocamento;
-        ok = chaveCesar(&deslocamento);
+        if (origem_chave == 2) {
+            deslocamento = sortear_numero(26);
+            printf("Chave gerada: %d\n", deslocamento);
+            ok = 1;
+        } else ok = chaveCesar(&deslocamento);
         if (ok) {
             if (opcao == 1) ok = criptCesar(&entrada, &saida, deslocamento);
             else ok = decriptCesar(&entrada, &saida, deslocamento);
@@ -258,14 +291,22 @@ static void executar_afim(void)
 {
     int opcao = escolher_operacao();
     if (opcao == -1) return;
-    int a;
+    int origem_chave = escolher_origem_chave(opcao);
+    if (origem_chave <= 0) return;
+    int a, b;
+    if (origem_chave == 2) {
+        a = gerar_cofator_afim();
+        b = sortear_numero(26);
+        printf("Chave gerada: A=%d B=%d\n", a, b);
+    } else {
     do {
         a = pedir_numero("Chave A (0 a 25): ", 0, 25);
         if (a == -1) return;
         if (!eh_coprimo_26(a)) printf("Chave invalida: A deve ser coprimo com 26.\n");
     } while (!eh_coprimo_26(a));
-    int b = pedir_numero("Chave B (0 a 25): ", 0, 25);
+    b = pedir_numero("Chave B (0 a 25): ", 0, 25);
     if (b == -1) return;
+    }
     printf("Texto sem acentos: ");
     char *linha = ler_mensagem();
     if (linha == NULL) return;
@@ -280,8 +321,13 @@ static void executar_substituicao(void)
     const char *alfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     int opcao = escolher_operacao();
     if (opcao == -1) return;
+    int origem_chave = escolher_origem_chave(opcao);
+    if (origem_chave <= 0) return;
     char *chave;
-    while (1) {
+    if (origem_chave == 2) {
+        chave = gerar_chave_substituicao();
+        printf("Chave gerada: %s\n", chave);
+    } else while (1) {
         printf("Chave: 26 letras sem repeticao, correspondentes a A-Z:\n");
         chave = ler_linha_dinamica();
         if (chave == NULL) return;
@@ -306,12 +352,21 @@ static void executar_hill(void)
 {
     int opcao = escolher_operacao();
     if (opcao == -1) return;
+    int origem_chave = escolher_origem_chave(opcao);
+    if (origem_chave <= 0) return;
     int ordem;
     if (!ler_numero("Ordem da matriz: ", 1, INT_MAX, &ordem)) return;
     int **chave = criarMatriz(ordem);
     int **inversa = criarMatriz(ordem);
     int terminou = 0;
-    do {
+    if (origem_chave == 2) {
+        gerar_chave_hill(chave, ordem);
+        printf("Matriz gerada (ordem %d):\n", ordem);
+        for (int i = 0; i < ordem; i++) {
+            for (int j = 0; j < ordem; j++) printf("%d%s", chave[i][j], j == ordem - 1 ? "" : " ");
+            putchar('\n');
+        }
+    } else do {
         terminou = !ler_matriz_hill(chave, ordem);
         if (terminou || calcularInversaHill(chave, inversa, ordem, 26)) break;
         printf("Chave invalida: matriz sem inversa em Z26. Digite outra matriz.\n");

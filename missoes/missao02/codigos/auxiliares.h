@@ -7,6 +7,7 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
+#include <time.h>
 
 /* Sem memoria, encerra com erro em vez de continuar com ponteiro nulo. */
 static void *memoria_dinamica(void *anterior, size_t quantidade, size_t tamanho)
@@ -274,5 +275,45 @@ int ler_matriz_hill(int **matriz, int ordem)
     return 1;
 }
 
+
+
+/* Gerador pseudoaleatorio didatico. Inicializado uma vez por execucao. */
+int sortear_numero(int limite)
+{
+    static int iniciado = 0;
+    if (!iniciado) {
+        srand((unsigned int) time(NULL));
+        iniciado = 1;
+    }
+    return rand() % limite; /* O chamador fornece limite positivo. */
+}
+
+/* Na decifragem, sempre utiliza a chave informada pelo usuario. */
+int escolher_origem_chave(int operacao)
+{
+    if (operacao == 2) return 1;
+    return pedir_numero("Chave: 1 - Informar, 2 - Gerar aleatoria, 0 - Cancelar: ", 0, 2);
+}
+
+void gerar_permutacao(int chave[], int tamanho)
+{
+    for (int i = 0; i < tamanho; i++) chave[i] = i;
+    for (int i = tamanho - 1; i > 0; i--) {
+        int j = sortear_numero(i + 1);
+        int temporario = chave[i];
+        chave[i] = chave[j];
+        chave[j] = temporario;
+    }
+}
+
+char *gerar_chave_substituicao(void)
+{
+    int indices[26];
+    gerar_permutacao(indices, 26);
+    char *chave = memoria_dinamica(NULL, 27, sizeof(char));
+    for (int i = 0; i < 26; i++) chave[i] = 'A' + indices[i];
+    chave[26] = '\0';
+    return chave;
+}
 
 #endif

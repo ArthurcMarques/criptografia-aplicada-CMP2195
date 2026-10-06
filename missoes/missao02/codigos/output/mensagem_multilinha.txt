@@ -1,0 +1,4 @@
+Esta mensagem ocupa varias linhas.
+O programa deve ler todo o arquivo.
+Vamos testar as cifras com um texto maior.
+A chave deve ser guardada para decifrar o resultado.

@@ -332,4 +332,34 @@ int eh_coprimo_26(int a)
 }
 
 
+
+int gerar_cofator_afim(void)
+{
+    const int coprimos[] = {1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25};
+    return coprimos[sortear_numero(12)];
+}
+
+/* Parte de uma matriz diagonal invertivel. Trocas de linhas e somas
+ * de multiplos de outra linha preservam a inversa em Z26.
+ * Evita tentar matrizes ao acaso ate encontrar uma invertivel. */
+void gerar_chave_hill(int **chave, int ordem)
+{
+    for (int i = 0; i < ordem; i++) {
+        for (int j = 0; j < ordem; j++) chave[i][j] = 0;
+        chave[i][i] = gerar_cofator_afim();
+    }
+    if (ordem == 1) return;
+    for (size_t passo = 0; passo < (size_t) ordem * 4; passo++) {
+        int a = sortear_numero(ordem);
+        int b = (a + 1 + (size_t) sortear_numero(ordem - 1)) % (size_t) ordem;
+        int fator = sortear_numero(26);
+        for (int j = 0; j < ordem; j++) {
+            chave[a][j] = (chave[a][j] + fator * chave[b][j]) % 26;
+        }
+        int *temporario = chave[a];
+        chave[a] = chave[b];
+        chave[b] = temporario;
+    }
+}
+
 #endif

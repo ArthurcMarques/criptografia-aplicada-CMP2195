@@ -422,3 +422,32 @@ A atualizacao deste documento nao altera os algoritmos e nao executa uma
 nova bateria. Os testes nao equivalem a auditoria de seguranca, medicao de
 vazamentos ou simulacao de falta de memoria. EXEMPLOS_TESTES.txt foi atualizado
 para incluir a escolha de teclado; os resultados esperados das cifras permanecem.
+
+## Geracao de chaves aleatorias - 06/10/2026
+
+Ao cifrar, o programa oferece 1 - Informar, 2 - Gerar aleatoria e
+0 - Cancelar. Na decifragem continua solicitando a chave usada originalmente.
+Toda chave gerada e exibida no terminal; guarde-a para decifrar depois.
+Ela nao e salva automaticamente em arquivo.
+
+- Cesar e autochave: inteiro de 0 a 25.
+- LFSR: semente de quatro bits entre 0001 e 1111.
+- Vigenere: o usuario informa a quantidade de letras; o gerador escolhe A-Z.
+- Transposicao: o usuario informa o bloco; o gerador embaralha as posicoes.
+- Afim: A e escolhido entre os coprimos com 26 e B entre 0 e 25.
+- Substituicao: permutacao das 26 letras, sem repeticoes.
+- Hill: o usuario informa a ordem; uma diagonal com elementos invertiveis
+  e transformada por operacoes de linha que preservam a inversa em Z26.
+
+O gerador usa rand, inicializado uma vez com time, para uso didatico.
+Nao e um gerador criptograficamente seguro e nao garante chaves distintas
+entre execucoes. As operacoes de Hill nao amostram uniformemente todas as matrizes.
+
+As rotinas gerais de sorteio e permutacao estao em auxiliares.h; os
+cofatores de afim e as matrizes invertiveis sao gerados em matematica.h.
+menu_cifras.h oferece a escolha e exibe as chaves. As formulas das cifras
+nao foram modificadas. Os exemplos de teste incluem a escolha de chave manual.
+
+Verificacao: cifragem e decifragem com a chave exibida nas oito opcoes,
+os 23 exemplos manuais e 400 matrizes Hill de ordens 1 a 4, conferindo
+que o produto pela inversa e a identidade modulo 26.
