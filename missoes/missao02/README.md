@@ -67,9 +67,9 @@ esperados. Todos passaram apos a reorganizacao, incluindo execucao
 consecutiva no menu. Tambem foram verificados chave negativa, minusculas
 e uma mensagem de 15.000 letras.
 
-[ALTERACOES_ENTRADAS_DINAMICAS.md](ALTERACOES_ENTRADAS_DINAMICAS.md) registra
-a etapa anterior e cita nomes antigos. Este README descreve a estrutura
-atual; os algoritmos e a leitura dinamica foram preservados.
+[ALTERACOES.md](ALTERACOES.md) registra
+a comparacao completa entre os codigos originais de referencia e a versao
+atual, incluindo correcoes, interfaces, reorganizacao e leitura de arquivos.
 
 ## Ler mensagens de arquivos
 
