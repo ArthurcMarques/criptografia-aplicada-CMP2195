@@ -10,6 +10,8 @@ int main(void)
 
         switch (opcao) {
             case 1:
+                /*Linear-Feedback Shift Register*/
+                /* Registrador de Deslocamento com Retroalimentação Linear*/
                 executar_lfsr();
                 break;
             case 2:
