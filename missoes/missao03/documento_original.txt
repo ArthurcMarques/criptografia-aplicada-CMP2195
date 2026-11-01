@@ -1,0 +1,9 @@
+TECHSECURE - DOCUMENTO CONFIDENCIAL
+
+Cliente: Empresa Exemplo
+Documento: Contrato de prestacao de servicos
+Valor do contrato: R$ 150.000,00
+Status: Aprovado
+
+Estas informacoes sao confidenciais e
+devem ser acessadas somente por pessoas autorizadas.
